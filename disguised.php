@@ -1,5 +1,5 @@
 <div id="disguised">
-    Eingeloggt als <?= get_fullname($GLOBALS['auth']->auth['uid']) ?> (<?= $GLOBALS['auth']->auth['uname'] ?>)
+    Eingeloggt als <?= htmlReady(get_fullname()) ?> (<?= get_username() ?>)
     | <a href="<?= $random ?>">Zufällig</a>
 </div>
 

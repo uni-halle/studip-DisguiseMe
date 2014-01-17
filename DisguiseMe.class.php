@@ -26,22 +26,18 @@
  * @package     IBIT_StudIP
  * @version     1.3.1
  */
-class DisguiseMe extends AbstractStudIPSystemPlugin {
-    private static $hit_once = false;
+class DisguiseMe extends StudIPPlugin implements SystemPlugin {
 
     public function getPluginname() {
         return _('Disguise Me');
     }
 
-    public function hasBackgroundTasks() {
-        return true;
-    }
 
-    public function doBackgroundTasks() {
-        if (!$this->is_valid_user() or self::$hit_once) {
+    public function __construct() {
+        parent::__construct();
+        if (!$this->is_valid_user()) {
             return;
         }
-        self::$hit_once = true;
 
         $template_factory = new Flexi_TemplateFactory(dirname(__FILE__));
 
@@ -61,7 +57,7 @@ class DisguiseMe extends AbstractStudIPSystemPlugin {
             ));
             $script = "//<![CDATA[\n" . rtrim($script) . "\n//]]>";
             PageLayout::addHeadElement('script', array('type' => 'text/javascript'), $script);
-        } elseif (preg_match('/about\.php$/', $_SERVER['PHP_SELF']) and Request::get('username')) {
+        } elseif (preg_match('~dispatch\.php/profile~', $_SERVER['REQUEST_URI']) and Request::get('username')) {
             $script = $template_factory->render('disguise-js', array(
                 'link' => PluginEngine::getURL($this, array('disguise_as' => Request::get('username'))),
             ));
@@ -76,7 +72,7 @@ class DisguiseMe extends AbstractStudIPSystemPlugin {
         }
     }
 
-    public function actionshow() {
+    public function show_action() {
         if (Request::get('action') === 'random') {
             $statement = DBManager::get()->prepare("SELECT user_id, perms, username FROM auth_user_md5 ORDER BY RAND() LIMIT 1");
             $statement->execute(array($username));
@@ -101,7 +97,7 @@ class DisguiseMe extends AbstractStudIPSystemPlugin {
             $_SESSION['old_identity'] = null;
             unset($_SESSION['old_identity']);
 
-            $this->relocate('about.php?username='.$uname);
+            $this->relocate('dispatch.php/profile?username='.$uname);
         } elseif (!$this->is_disguised() and $username = Request::get('disguise_as')) {
             $statement = DBManager::get()->prepare("SELECT user_id, perms FROM auth_user_md5 WHERE username = ?");
             $statement->execute(array($username));
@@ -121,13 +117,13 @@ class DisguiseMe extends AbstractStudIPSystemPlugin {
             $_SESSION['auth']->auth['perm']  = $row['perms'];
             $_SESSION['auth']->auth['uname'] = $username;
 
-            $this->relocate('about.php');
+            $this->relocate('dispatch.php/profile');
         }
     }
 
     private function is_valid_user() {
         return $this->is_disguised()
-            or $this->getUser()->getPermission()->hasRootPermission();
+            or $GLOBALS['perm']->have_perm('root');
     }
 
     private function is_disguised() {
